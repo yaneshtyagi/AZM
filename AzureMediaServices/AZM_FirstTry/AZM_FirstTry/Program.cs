@@ -14,7 +14,7 @@ namespace AZM_FirstTry
     class Program
     {
         static string accountName = "kmugdemo";
-        static string accountKey = ""; //get from evernote
+        static string accountKey = "GhQ3/qOjofMI6ph7CUsftCIMjXJw2chIjR5Fg4Pk4OE="; //get from EN
         static string accountLocation = "";
         static CloudMediaContext context = null;
         static string outputFilesFolder = "Log.txt";
@@ -22,7 +22,30 @@ namespace AZM_FirstTry
         static void Main(string[] args)
         {
             context = GetContext();
-            CreateAssetAndUploadSingleFile(AssetCreationOptions.None, @"C:\Users\Yanesh\Pictures\LinkedinContentFilters.png");
+            //CreateAssetAndUploadSingleFile(AssetCreationOptions.None, @"C:\Users\Yanesh\Pictures\LinkedinContentFilters.png");
+
+            List<IAsset> assetList = GetAllAssets(ref context);
+            //DownloadAsset(jobID, @"D:\Temp\Azure");
+
+            Console.ReadLine();
+        }
+
+        private static List<IAsset> GetAllAssets(ref CloudMediaContext context)
+        {
+            var assetList = new List<IAsset>();
+            foreach (IAsset asset in context.Assets)
+            {
+                Console.WriteLine(asset.Name);
+                foreach (IAssetFile file in asset.AssetFiles)
+                {
+                    Console.WriteLine("\tdownloading: " + file.Name);
+                    string localDownloadPath = Path.Combine(@"D:\Temp\Azure", file.Name);
+                    file.Download(localDownloadPath);
+                    Console.WriteLine("Downloaded: " + localDownloadPath);
+                }
+            }
+
+            return assetList;
         }
 
         static CloudMediaContext GetContext()
@@ -163,7 +186,42 @@ namespace AZM_FirstTry
             return job;
         }
 
-        
+        /// <summary>
+        /// Too complicated. The other method is pretty much simple.
+        /// </summary>
+        /// <param name="jobID"></param>
+        /// <param name="outputFolder"></param>
+        /// <returns></returns>
+        static IAsset DownloadAsset(string jobID, string outputFolder)
+        {
+            IJob job = GetJob(jobID);
+            IAsset outputAsset = job.OutputMediaAssets[0];
+            IAccessPolicy accessPolicy = context.AccessPolicies.Create("File Download Policy", TimeSpan.FromDays(30), AccessPermissions.Read);
+            ILocator locator = context.Locators.CreateLocator(LocatorType.Sas, outputAsset, accessPolicy);
+
+            BlobTransferClient client = new BlobTransferClient()
+            {
+                NumberOfConcurrentTransfers = 10,
+                ParallelTransferThreadCount = 10
+            };
+
+            var downloadTasks = new List<Task>();
+            foreach (IAssetFile outputFile in outputAsset.AssetFiles)
+            {
+                string localDownloadPath = Path.Combine(outputFolder, outputFile.Name);
+                Console.Write("File download path: " + localDownloadPath);
+                downloadTasks.Add(
+                    outputFile.DownloadAsync(
+                        Path.GetFullPath(localDownloadPath),
+                        client,
+                        locator,
+                        CancellationToken.None)
+                    );
+            }
+            Task.WaitAll(downloadTasks.ToArray());
+            return outputAsset;
+
+        }
 
 
 
