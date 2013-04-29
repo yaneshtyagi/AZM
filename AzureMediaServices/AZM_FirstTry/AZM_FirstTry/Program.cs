@@ -14,7 +14,7 @@ namespace AZM_FirstTry
     class Program
     {
         static string accountName = "kmugdemo";
-        static string accountKey = "GhQ3/qOjofMI6ph7CUsftCIMjXJw2chIjR5Fg4Pk4OE="; //get from EN
+        static string accountKey = ""; //get from portal
         static string accountLocation = "";
         static CloudMediaContext context = null;
         static string outputFilesFolder = "Log.txt";
